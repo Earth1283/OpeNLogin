@@ -38,8 +38,8 @@ public class PlayerAuthenticateListener implements Listener {
     private boolean welcomeMessage;
 
     @EventHandler
-    public void onAsyncAuthenticate(AsyncAuthenticateEvent e) {
-        Player player = e.getPlayer();
+    public void onAsyncAuthenticate(AsyncAuthenticateEvent event) {
+        Player player = event.getPlayer();
         if (!player.hasPermission("openlogin.admin")) return;
 
         if (welcomeMessage) {
