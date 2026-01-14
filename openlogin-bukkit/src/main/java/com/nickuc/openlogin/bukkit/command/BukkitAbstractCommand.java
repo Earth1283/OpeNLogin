@@ -63,7 +63,7 @@ public abstract class BukkitAbstractCommand implements CommandExecutor {
                 return true;
             }
         } else if (!sender.hasPermission(permission)) {
-            sender.sendMessage(Messages.INSUFFICIENT_PERMISSIONS.asString());
+            sender.sendMessage(Messages.INSUFFICIENT_PERMISSIONS.asString(permission));
             return true;
         }
 

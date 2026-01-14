@@ -101,13 +101,13 @@ public enum Messages {
         Settings.SETTINGS.put(message.key, value);
     }
 
-    public String asString() {
-        return asString("§cMissing message: " + key);
+    public String asString(Object... format) {
+        return asString("§cMissing message: " + key, format);
     }
 
-    public String asString(@NonNull String def) {
+    public String asString(@NonNull String def, Object... format) {
         Object obj = Settings.SETTINGS.get(key);
-        return (String) (!(obj instanceof String) ? def : obj);
+        return String.format((String) (!(obj instanceof String) ? def : obj), format);
     }
 
     public Title asTitle() {

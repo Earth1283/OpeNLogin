@@ -117,7 +117,7 @@ public class RegisterCommand extends BukkitAbstractCommand {
 
     private void performConsole(CommandSender sender, String lb, String[] args) {
         if (!sender.hasPermission("openlogin.admin")) {
-            sender.sendMessage(Messages.INSUFFICIENT_PERMISSIONS.asString());
+            sender.sendMessage(Messages.INSUFFICIENT_PERMISSIONS.asString("openlogin.admin"));
             return;
         }
 

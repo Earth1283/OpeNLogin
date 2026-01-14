@@ -157,8 +157,13 @@ public class OpenLoginCommand extends BukkitAbstractCommand {
 
                     Player player = (Player) sender;
                     String name = player.getName();
-                    if (!plugin.isNewUser() && !plugin.getLoginManagement().isAuthenticated(name)) {
-                        return;
+                    if (!plugin.isNewUser()) {
+                        if (!plugin.getLoginManagement().isAuthenticated(name)) return;
+
+                        if (!sender.hasPermission("openlogin.admin")) {
+                            sender.sendMessage(Messages.INSUFFICIENT_PERMISSIONS.asString("openlogin.admin"));
+                            return;
+                        }
                     }
 
                     if (downloadLock.get()) {
