@@ -27,7 +27,6 @@ package com.nickuc.openlogin.bukkit.command.executors;
 import com.nickuc.openlogin.bukkit.OpenLoginBukkit;
 import com.nickuc.openlogin.bukkit.command.BukkitAbstractCommand;
 import com.nickuc.openlogin.bukkit.ui.chat.ActionbarAPI;
-import com.nickuc.openlogin.bukkit.ui.title.TitleAPI;
 import com.nickuc.openlogin.common.http.HttpClient;
 import com.nickuc.openlogin.common.settings.Messages;
 import com.nickuc.openlogin.common.util.FileUtils;
@@ -41,10 +40,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class OpenLoginCommand extends BukkitAbstractCommand {
 
-    private final AtomicBoolean
-            downloadLock = new AtomicBoolean(),
-            confirmNLogin = new AtomicBoolean(),
-            confirmOpenLogin = new AtomicBoolean();
+    private static final String REPOSITORY = "Earth1283/OpeNLogin";
+
+    private final AtomicBoolean downloadLock = new AtomicBoolean();
 
     public OpenLoginCommand(OpenLoginBukkit plugin) {
         super(plugin, "openlogin");
@@ -91,116 +89,23 @@ public class OpenLoginCommand extends BukkitAbstractCommand {
                     }
                     return;
                 }
-
-                case "setup": {
-                    if (!(sender instanceof Player)) {
-                        sender.sendMessage(Messages.PLAYER_COMMAND_USAGE.asString());
-                        return;
-                    }
-
-                    if (!plugin.isNewUser()) {
-                        return;
-                    }
-
-                    if (!confirmOpenLogin.getAndSet(true)) {
-                        sender.sendMessage("");
-                        sender.sendMessage(" §cnLogin is generally a better solution for most users.");
-                        sender.sendMessage(" §7If you want to install §fOpeNLogin §7anyway,");
-                        sender.sendMessage(" §7please click on the message again.");
-                        sender.sendMessage("");
-                        return;
-                    }
-
-                    for (Player on : plugin.getServer().getOnlinePlayers()) {
-                        plugin.getFoliaLib().runAtEntity(on, task -> on.kickPlayer("§aPlease rejoin to complete the plugin installation."));
-                    }
-
-                    plugin.setNewUser(false);
-                    plugin.getPluginSettings().set("setup_date", Long.toString(System.currentTimeMillis()));
-
-                    File newUserfile = new File(plugin.getDataFolder(), "new-user");
-                    if (newUserfile.exists() && !newUserfile.delete()) {
-                        newUserfile.deleteOnExit();
-                    }
-                    return;
-                }
-
-                case "nlogin": {
-                    if (!(sender instanceof Player)) {
-                        sender.sendMessage(Messages.PLAYER_COMMAND_USAGE.asString());
-                        return;
-                    }
-
-                    Player player = (Player) sender;
-                    String name = player.getName();
-                    if (!plugin.isNewUser() && !plugin.getLoginManagement().isAuthenticated(name)) {
-                        return;
-                    }
-
-                    if (downloadLock.get()) {
-                        sender.sendMessage("§cDownload in progress...");
-                        return;
-                    }
-
-                    boolean skip = args.length == 2 && args[1].equalsIgnoreCase("skip");
-                    if (!skip && !confirmNLogin.getAndSet(true)) {
-                        sender.sendMessage("");
-                        sender.sendMessage(" §6nLogin §7is a §6proprietary §7authentication plugin,");
-                        sender.sendMessage(" §7updated and maintained by §cnickuc.com§7. This means that you");
-                        sender.sendMessage(" §7cannot view and modify the source code of the plugin.");
-                        sender.sendMessage("");
-                        sender.sendMessage(" §eIf you still have questions, please contact us:");
-                        sender.sendMessage(" §bnickuc.com/discord");
-                        sender.sendMessage("");
-                        sender.sendMessage(" §7To proceed with the download, type §b/openlogin nlogin §7again.");
-                        sender.sendMessage("");
-                    } else {
-                        if (downloadLock.getAndSet(true)) {
-                            sender.sendMessage("§cDownload already in progress!");
-                            return;
-                        }
-
-                        Runnable callback = null;
-                        if (skip && plugin.isNewUser()) {
-                            callback = () -> {
-                                for (Player on : plugin.getServer().getOnlinePlayers()) {
-                                    plugin.getFoliaLib().runAtEntity(on, task -> {
-                                        on.closeInventory();
-                                        on.kickPlayer("§anLogin was successfully installed. We are restarting the server to apply the changes.");
-                                    });
-                                }
-                                plugin.getServer().shutdown();
-                            };
-                            TitleAPI.getApi().reset(player);
-                        }
-                        if (!downloadNLogin(player, callback)) {
-                            downloadLock.set(false);
-                        }
-                    }
-                    return;
-                }
             }
         }
 
         sender.sendMessage("");
-        sender.sendMessage(" §eThis server is running §fOpenLogin v " + plugin.getDescription().getVersion() + ".");
-        sender.sendMessage(" §7Powered by §bwww.nickuc.com§7.");
+        sender.sendMessage(" §eThis server is running §fOpeNLogin v " + plugin.getDescription().getVersion() + ".");
         sender.sendMessage("");
-        sender.sendMessage(" §7GitHub: §fhttps://github.com/nickuc/OpeNLogin");
+        sender.sendMessage(" §7GitHub: §fhttps://github.com/" + REPOSITORY);
         sender.sendMessage("");
     }
 
     private boolean update(Player player) {
-        File output = new File(plugin.getDataFolder().getParentFile(), "OpenLogin-" + plugin.getLatestVersion() + ".jar");
-        return downloadActionbar(player, "https://github.com/nickuc/OpeNLogin/releases/download/" + plugin.getLatestVersion() + "/OpenLogin.jar", output, true, null);
+        File output = new File(plugin.getDataFolder().getParentFile(), "OpeNLogin-" + plugin.getLatestVersion() + ".jar");
+        String url = "https://github.com/" + REPOSITORY + "/releases/download/" + plugin.getLatestVersion() + "/OpenLogin.jar";
+        return downloadActionbar(player, url, output);
     }
 
-    private boolean downloadNLogin(Player player, Runnable callback) {
-        File output = new File(plugin.getDataFolder().getParentFile(), "nLogin.jar");
-        return downloadActionbar(player, "https://repo.nickuc.com/files/latest/nLogin.jar", output, false, callback);
-    }
-
-    private boolean downloadActionbar(Player player, String url, File output, boolean update, Runnable callback) {
+    private boolean downloadActionbar(Player player, String url, File output) {
         player.sendMessage("§eDownloading...");
         ActionbarAPI.getApi().send(player, "§eConnecting...");
 
@@ -224,9 +129,6 @@ public class OpenLoginCommand extends BukkitAbstractCommand {
                 if (downloadSuccessful.get()) {
                     ActionbarAPI.getApi().send(player, "§aDownload finished! §7(§a" + repeatString("|", barsCount) + "§7)");
                     player.sendMessage("§aDownload finished. Please restart your server.");
-                    if (callback != null) {
-                        callback.run();
-                    }
                 } else {
                     ActionbarAPI.getApi().send(player, "§cDownload failed! §7(§a" + repeatString("|", barsCount) + "§7)");
                     player.sendMessage("§cDownload failed, please try again.");
@@ -248,9 +150,7 @@ public class OpenLoginCommand extends BukkitAbstractCommand {
         } catch (IOException e) {
             downloadLock.set(false);
             e.printStackTrace();
-            String msg = update ?
-                    "§cFailed to download new version. Update manually at: https://github.com/nickuc/OpeNLogin/releases" :
-                    "§cFailed to download nLogin :c. Download manually at: nickuc.com";
+            String msg = "§cFailed to download new version. Update manually at: https://github.com/" + REPOSITORY + "/releases";
             plugin.sendMessage(msg);
             player.sendMessage(msg);
         } finally {

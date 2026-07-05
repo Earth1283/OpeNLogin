@@ -25,7 +25,6 @@
 package com.nickuc.openlogin.bukkit.command;
 
 import com.nickuc.openlogin.bukkit.OpenLoginBukkit;
-import com.nickuc.openlogin.bukkit.command.executors.OpenLoginCommand;
 import com.nickuc.openlogin.common.manager.LoginManagement;
 import com.nickuc.openlogin.common.settings.Messages;
 import lombok.NonNull;
@@ -58,11 +57,7 @@ public abstract class BukkitAbstractCommand implements CommandExecutor {
             return true;
         }
 
-        if (plugin.isNewUser()) {
-            if (!(this instanceof OpenLoginCommand)) {
-                return true;
-            }
-        } else if (!sender.hasPermission(permission)) {
+        if (!sender.hasPermission(permission)) {
             sender.sendMessage(Messages.INSUFFICIENT_PERMISSIONS.asString());
             return true;
         }

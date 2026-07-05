@@ -46,10 +46,7 @@ public class PlayerAuthenticateListener implements Listener {
                 player.sendMessage(" §eWelcome to OpeNLogin!");
                 player.sendMessage("");
                 player.sendMessage(" §7Documentation:");
-                player.sendMessage(" §bhttps://github.com/nickuc/OpeNLogin/tree/master/docs");
-                player.sendMessage("");
-                player.sendMessage(" §7If you need help, fell free to contact our support:");
-                player.sendMessage(" §bhttps://www.nickuc.com/discord");
+                player.sendMessage(" §bhttps://github.com/Earth1283/OpeNLogin/tree/master/docs");
                 player.sendMessage("");
                 welcomeMessage = false;
             } else if (plugin.isUpdateAvailable()) {

@@ -47,10 +47,6 @@ import com.nickuc.openlogin.common.util.FileUtils;
 import com.tcoded.folialib.FoliaLib;
 import com.tcoded.folialib.impl.ServerImplementation;
 import lombok.Getter;
-import lombok.Setter;
-import org.bstats.bukkit.Metrics;
-import org.bstats.charts.SimplePie;
-import org.bstats.charts.SingleLineChart;
 import org.bukkit.Server;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.PluginManager;
@@ -74,20 +70,9 @@ public class OpenLoginBukkit extends JavaPlugin {
 
     private String latestVersion;
     private boolean updateAvailable;
-    @Setter
-    private boolean newUser;
     private int registeredUsers;
 
     public void onEnable() {
-        PluginManager pm = getServer().getPluginManager();
-
-        // detect nLogin
-        if (pm.getPlugin("nLogin") != null) {
-            sendMessage("nLogin was detected, turning off plugin...");
-            pm.disablePlugin(this);
-            return;
-        }
-
         String c = "§9";
         sendMessage(c + "   ___                __  __             _ ");
         sendMessage(c + "  /___\\_ __   ___  /\\ \\ \\/ /  ___   __ _(_)_ __");
@@ -95,22 +80,12 @@ public class OpenLoginBukkit extends JavaPlugin {
         sendMessage(c + "/ \\_//| |_) |  __/ /\\  / /__| (_) | (_| | | | | |");
         sendMessage(c + "\\___/ | .__/ \\___\\_\\ \\/\\____/\\___/ \\__, |_|_| |_|");
         sendMessage(c + "      |_|                          |___/         ");
-        sendMessage(c + "By: www.nickuc.com / github.com/nickuc/OpeNLogin - V " + getDescription().getVersion());
+        sendMessage(c + "github.com/Earth1283/OpeNLogin - V " + getDescription().getVersion());
         sendMessage("");
 
         Server server = getServer();
 
-        File newUserfile = new File(getDataFolder(), "new-user");
-        newUser = !new File(getDataFolder() + "/database", "accounts.db").exists() && !new File(getDataFolder(), "config.yml").exists() || newUserfile.exists();
-        if (newUser && !newUserfile.exists()) {
-            try {
-                if (newUserfile.getParentFile().mkdirs()) {
-                    newUserfile.createNewFile();
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
+        boolean freshInstall = !new File(getDataFolder(), "accounts.db").exists() && !new File(getDataFolder(), "config.yml").exists();
 
         // setup config
         if (!setupSettings()) {
@@ -141,16 +116,13 @@ public class OpenLoginBukkit extends JavaPlugin {
         LoggerFilterManager.setup(getLogger());
 
         // setup listeners
-        setupListeners(newUser);
+        setupListeners(freshInstall);
 
         // start login queue task
         LoginQueue.startTask(this);
 
         // setup api
         OpenLogin.setApi(new OLBukkitAPI(this));
-
-        // metrics
-        setupMetrics();
 
         // updates
         foliaLib.runAsync(task -> this.detectUpdates());
@@ -188,24 +160,18 @@ public class OpenLoginBukkit extends JavaPlugin {
         }
     }
 
-    private void setupListeners(boolean newUser) {
+    private void setupListeners(boolean freshInstall) {
         PluginManager pm = getServer().getPluginManager();
         pm.registerEvents(new PlayerGeneralListeners(this), this);
         pm.registerEvents(new PlayerJoinListeners(this), this);
         pm.registerEvents(new PlayerKickListeners(this), this);
-        pm.registerEvents(new PlayerAuthenticateListener(this, newUser), this);
-    }
-
-    private void setupMetrics() {
-        Metrics metrics = new Metrics(this, 8951);
-        metrics.addCustomChart(new SimplePie("language_file", Settings.LANGUAGE_FILE::asString));
-        metrics.addCustomChart(new SingleLineChart("registered_users", () -> registeredUsers));
+        pm.registerEvents(new PlayerAuthenticateListener(this, freshInstall), this);
     }
 
     public void detectUpdates() {
         String tagName = null;
         try {
-            String result = HttpClient.DEFAULT.get("https://api.github.com/repos/nickuc/OpeNLogin/releases/latest");
+            String result = HttpClient.DEFAULT.get("https://api.github.com/repos/Earth1283/OpeNLogin/releases/latest");
 
             // avoid use Google Gson to avoid problems with older versions.
             if (result.contains("\"tag_name\":\"")) {
@@ -216,11 +182,11 @@ public class OpenLoginBukkit extends JavaPlugin {
             }
         } catch (IOException e) {
             sendMessage("§cFailed to find new updates.");
-            sendMessage("§cDownload the latest version at: https://github.com/nickuc/OpeNLogin/releases");
+            sendMessage("§cDownload the latest version at: https://github.com/Earth1283/OpeNLogin/releases");
         }
         if (tagName == null) {
             sendMessage("§cFailed to find new updates: invalid response.");
-            sendMessage("§cDownload the latest version at: https://github.com/nickuc/OpeNLogin/releases");
+            sendMessage("§cDownload the latest version at: https://github.com/Earth1283/OpeNLogin/releases");
         } else {
             String currentVersion = "v" + getDescription().getVersion();
             updateAvailable = !currentVersion.equals(tagName);
