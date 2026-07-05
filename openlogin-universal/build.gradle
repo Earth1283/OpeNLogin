@@ -12,6 +12,7 @@ shadowJar {
     archiveFileName = 'OpenLogin.jar'
 
     def libPkg = project.group + '.lib.'
-    relocate 'org.bstats', libPkg + 'bstats'
     relocate 'com.tcoded.folialib', libPkg + 'folialib'
+    relocate 'com.zaxxer.hikari', libPkg + 'hikari'
+    relocate 'com.mysql', libPkg + 'mysql'
 }

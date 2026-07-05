@@ -25,15 +25,20 @@
 package com.nickuc.openlogin.bukkit.listener;
 
 import com.nickuc.openlogin.bukkit.OpenLoginBukkit;
+import com.nickuc.openlogin.bukkit.api.events.AsyncAuthenticateEvent;
 import com.nickuc.openlogin.bukkit.task.LoginQueue;
 import com.nickuc.openlogin.bukkit.ui.title.TitleAPI;
+import com.nickuc.openlogin.common.model.Account;
 import com.nickuc.openlogin.common.settings.Messages;
+import com.nickuc.openlogin.common.settings.Settings;
 import lombok.AllArgsConstructor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
+
+import java.util.Optional;
 
 @AllArgsConstructor
 public class PlayerJoinListeners implements Listener {
@@ -45,7 +50,13 @@ public class PlayerJoinListeners implements Listener {
         Player player = e.getPlayer();
         String name = player.getName();
 
-        boolean registered = plugin.getAccountManagement().retrieveOrLoad(name).isPresent();
+        Optional<Account> accountOpt = plugin.getAccountManagement().retrieveOrLoad(name);
+        boolean registered = accountOpt.isPresent();
+
+        if (registered && tryResumeSession(player, accountOpt.get())) {
+            return;
+        }
+
         LoginQueue.addToQueue(name, registered);
 
         player.setWalkSpeed(0F);
@@ -58,5 +69,36 @@ public class PlayerJoinListeners implements Listener {
             player.sendMessage(Messages.MESSAGE_REGISTER.asString());
             TitleAPI.getApi().send(player, Messages.TITLE_BEFORE_REGISTER.asTitle());
         }
+    }
+
+    /**
+     * Auto-authenticates a returning player when they rejoin from the same address within the
+     * configured session timeout, skipping the password prompt entirely.
+     *
+     * @return true if the player was auto-authenticated
+     */
+    private boolean tryResumeSession(Player player, Account account) {
+        if (player.getAddress() == null) {
+            return false;
+        }
+
+        String address = player.getAddress().getAddress().getHostAddress();
+        if (!plugin.getLoginManagement().isSessionValid(account, address, Settings.SESSION_TIMEOUT.asInt())) {
+            return false;
+        }
+
+        String name = player.getName();
+        plugin.getLoginManagement().setAuthenticated(name);
+
+        player.setWalkSpeed(0.2F);
+        player.setFlySpeed(0.1F);
+        player.sendMessage(Messages.SUCCESSFUL_LOGIN.asString());
+        TitleAPI.getApi().send(player, Messages.TITLE_AFTER_LOGIN.asTitle());
+
+        plugin.getFoliaLib().runAsync(task -> {
+            plugin.getAccountManagement().update(name, account.getHashedPassword(), address);
+            new AsyncAuthenticateEvent(player).callEvt();
+        });
+        return true;
     }
 }

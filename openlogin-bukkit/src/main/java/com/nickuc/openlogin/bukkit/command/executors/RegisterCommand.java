@@ -91,9 +91,15 @@ public class RegisterCommand extends BukkitAbstractCommand {
             return;
         }
 
+        String address = sender.getAddress().getAddress().getHostAddress();
+        int maxAccountsPerIp = Settings.MAX_ACCOUNTS_PER_IP.asInt();
+        if (maxAccountsPerIp > 0 && accountManagement.countByAddress(address) >= maxAccountsPerIp) {
+            sender.sendMessage(Messages.TOO_MANY_ACCOUNTS.asString());
+            return;
+        }
+
         String salt = BCrypt.gensalt();
         String hashedPassword = BCrypt.hashpw(password, salt);
-        String address = sender.getAddress().getAddress().getHostAddress();
         if (!accountManagement.update(name, hashedPassword, address, false)) {
             sender.sendMessage(Messages.DATABASE_ERROR.asString());
             return;

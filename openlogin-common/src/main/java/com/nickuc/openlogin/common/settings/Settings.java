@@ -41,6 +41,22 @@ public enum Settings {
             "Security.time-to-login",
             45
     ),
+    SESSION_TIMEOUT(
+            "Security.session.timeout-minutes",
+            0
+    ),
+    MAX_LOGIN_ATTEMPTS(
+            "Security.brute-force.max-login-attempts",
+            5
+    ),
+    LOGIN_ATTEMPTS_RESET_MINUTES(
+            "Security.brute-force.reset-minutes",
+            10
+    ),
+    MAX_ACCOUNTS_PER_IP(
+            "Security.brute-force.max-accounts-per-ip",
+            3
+    ),
     PASSWORD_SMALL(
             "Security.password.small",
             5
@@ -48,6 +64,38 @@ public enum Settings {
     PASSWORD_LARGE(
             "Security.password.large",
             15
+    ),
+    STORAGE_TYPE(
+            "Storage.type",
+            "SQLITE"
+    ),
+    MYSQL_HOST(
+            "Storage.MySQL.host",
+            "localhost"
+    ),
+    MYSQL_PORT(
+            "Storage.MySQL.port",
+            3306
+    ),
+    MYSQL_DATABASE(
+            "Storage.MySQL.database",
+            "openlogin"
+    ),
+    MYSQL_USERNAME(
+            "Storage.MySQL.username",
+            "root"
+    ),
+    MYSQL_PASSWORD(
+            "Storage.MySQL.password",
+            ""
+    ),
+    MYSQL_USE_SSL(
+            "Storage.MySQL.useSSL",
+            false
+    ),
+    MYSQL_POOL_SIZE(
+            "Storage.MySQL.pool-size",
+            10
     );
 
     static final HashMap<String, Object> SETTINGS = new HashMap<>();
@@ -79,6 +127,10 @@ public enum Settings {
 
     public int asInt() {
         return get(Integer.class);
+    }
+
+    public boolean asBoolean() {
+        return get(Boolean.class);
     }
 
     @SuppressWarnings("unchecked")

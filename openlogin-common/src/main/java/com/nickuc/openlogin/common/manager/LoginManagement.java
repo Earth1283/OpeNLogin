@@ -24,18 +24,21 @@
 
 package com.nickuc.openlogin.common.manager;
 
+import com.nickuc.openlogin.common.model.Account;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 @RequiredArgsConstructor
 public class LoginManagement {
 
     private final Map<String, Long> lock = new HashMap<>();
     private final HashSet<String> logged = new HashSet<>();
+    private final Map<String, FailedAttempts> failedAttempts = new HashMap<>();
 
     private final AccountManagement accountManagement;
 
@@ -79,6 +82,26 @@ public class LoginManagement {
     }
 
     /**
+     * Checks whether a returning player can skip re-entering their password: the join address must
+     * match the address stored on the account and the last login must be within the timeout window.
+     *
+     * @param account         the player's account
+     * @param address         the address the player is currently joining from
+     * @param timeoutMinutes  the configured session timeout, in minutes (0 or less disables sessions)
+     * @return true if the session is still valid
+     */
+    public boolean isSessionValid(@NonNull Account account, @NonNull String address, int timeoutMinutes) {
+        if (timeoutMinutes <= 0) {
+            return false;
+        }
+        if (!address.equals(account.getAddress())) {
+            return false;
+        }
+        long elapsed = System.currentTimeMillis() - account.getLastLogin();
+        return elapsed >= 0 && elapsed <= TimeUnit.MINUTES.toMillis(timeoutMinutes);
+    }
+
+    /**
      * Checks if the player is unlocked and lock it.
      *
      * @param name the name of the player
@@ -92,6 +115,73 @@ public class LoginManagement {
                 return true;
             }
             return false;
+        }
+    }
+
+    /**
+     * Checks whether the player has exceeded the allowed number of wrong password attempts and
+     * is currently locked out. Intentionally not cleared on disconnect, since a brute-force
+     * attempt would otherwise just reconnect to reset its own counter.
+     *
+     * @param name          the name of the player
+     * @param maxAttempts   attempts allowed before lockout (0 or less disables this protection)
+     * @param resetMinutes  minutes after the last attempt before the counter resets
+     * @return true if the player is currently locked out
+     */
+    public boolean isBlocked(@NonNull String name, int maxAttempts, int resetMinutes) {
+        if (maxAttempts <= 0) {
+            return false;
+        }
+        String key = name.toLowerCase();
+        synchronized (failedAttempts) {
+            FailedAttempts attempts = failedAttempts.get(key);
+            if (attempts == null) {
+                return false;
+            }
+            if (attempts.isExpired(resetMinutes)) {
+                failedAttempts.remove(key);
+                return false;
+            }
+            return attempts.count >= maxAttempts;
+        }
+    }
+
+    /**
+     * Registers a wrong password attempt for the player.
+     *
+     * @param name         the name of the player
+     * @param resetMinutes minutes after the last attempt before the counter resets
+     */
+    public void registerFailedAttempt(@NonNull String name, int resetMinutes) {
+        String key = name.toLowerCase();
+        synchronized (failedAttempts) {
+            FailedAttempts attempts = failedAttempts.get(key);
+            if (attempts == null || attempts.isExpired(resetMinutes)) {
+                attempts = new FailedAttempts();
+                failedAttempts.put(key, attempts);
+            }
+            attempts.count++;
+            attempts.lastAttempt = System.currentTimeMillis();
+        }
+    }
+
+    /**
+     * Clears the failed attempt counter for the player, called after a successful login.
+     *
+     * @param name the name of the player
+     */
+    public void resetFailedAttempts(@NonNull String name) {
+        synchronized (failedAttempts) {
+            failedAttempts.remove(name.toLowerCase());
+        }
+    }
+
+    private static class FailedAttempts {
+        private int count;
+        private long lastAttempt;
+
+        private boolean isExpired(int resetMinutes) {
+            return resetMinutes > 0 && System.currentTimeMillis() - lastAttempt > TimeUnit.MINUTES.toMillis(resetMinutes);
         }
     }
 }

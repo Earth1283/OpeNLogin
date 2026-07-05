@@ -19,9 +19,41 @@ Security:
   # Amount of time for a player to log in/register (set in seconds).
   time-to-login: 45
 
+  session:
+    # Minutes a returning player may skip re-entering their password when rejoining
+    # from the same IP address they last logged in from. Set to 0 to disable.
+    timeout-minutes: 0
+
   password:
     # Small password size.
     small: 5
 
     # Size for big passwords.
     large: 15
+
+  brute-force:
+    # How many wrong passwords a player may enter before being locked out.
+    # Set to 0 to disable this protection.
+    max-login-attempts: 5
+
+    # How many minutes a lockout lasts (and the window that failed attempts are counted in).
+    reset-minutes: 10
+
+    # Maximum number of accounts that may be registered from the same IP address.
+    # Set to 0 to disable this limit.
+    max-accounts-per-ip: 3
+
+# Storage settings.
+Storage:
+  # Storage type: SQLITE or MYSQL
+  type: 'SQLITE'
+
+  # Only used when type is set to MYSQL.
+  MySQL:
+    host: 'localhost'
+    port: 3306
+    database: 'openlogin'
+    username: 'root'
+    password: ''
+    useSSL: false
+    pool-size: 10

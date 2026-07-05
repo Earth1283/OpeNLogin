@@ -33,9 +33,11 @@ import com.nickuc.openlogin.common.manager.AccountManagement;
 import com.nickuc.openlogin.common.manager.LoginManagement;
 import com.nickuc.openlogin.common.model.Account;
 import com.nickuc.openlogin.common.settings.Messages;
+import com.nickuc.openlogin.common.settings.Settings;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
+import java.util.Objects;
 import java.util.Optional;
 
 public class LoginCommand extends BukkitAbstractCommand {
@@ -62,6 +64,14 @@ public class LoginCommand extends BukkitAbstractCommand {
             return;
         }
 
+        Player player = (Player) sender;
+        int maxAttempts = Settings.MAX_LOGIN_ATTEMPTS.asInt();
+        int resetMinutes = Settings.LOGIN_ATTEMPTS_RESET_MINUTES.asInt();
+        if (loginManagement.isBlocked(name, maxAttempts, resetMinutes)) {
+            plugin.getFoliaLib().runAtEntity(player, task -> player.kickPlayer(Messages.FAILED_MANY_TIMES.asString()));
+            return;
+        }
+
         AccountManagement accountManagement = plugin.getAccountManagement();
         Optional<Account> accountOpt = accountManagement.retrieveOrLoad(name);
         if (!accountOpt.isPresent()) {
@@ -72,15 +82,19 @@ public class LoginCommand extends BukkitAbstractCommand {
         Account account = accountOpt.get();
         String password = args[0];
 
-        Player player = (Player) sender;
         if (!accountManagement.comparePassword(account, password)) {
+            loginManagement.registerFailedAttempt(name, resetMinutes);
             plugin.getFoliaLib().runAtEntity(player, task -> player.kickPlayer(Messages.INCORRECT_PASSWORD.asString()));
             return;
         }
 
         AsyncLoginEvent loginEvent = new AsyncLoginEvent(player);
         if (loginEvent.callEvt()) {
-            plugin.getLoginManagement().setAuthenticated(name);
+            loginManagement.setAuthenticated(name);
+            loginManagement.resetFailedAttempts(name);
+
+            String address = Objects.requireNonNull(player.getAddress()).getAddress().getHostAddress();
+            accountManagement.update(name, account.getHashedPassword(), address);
 
             player.sendMessage(Messages.SUCCESSFUL_LOGIN.asString());
             TitleAPI.getApi().send(player, Messages.TITLE_AFTER_LOGIN.asTitle());

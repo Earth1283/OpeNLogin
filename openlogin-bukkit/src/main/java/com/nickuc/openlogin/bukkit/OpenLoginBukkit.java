@@ -34,6 +34,7 @@ import com.nickuc.openlogin.bukkit.task.LoginQueue;
 import com.nickuc.openlogin.common.OpenLogin;
 import com.nickuc.openlogin.common.api.OpenLoginAPI;
 import com.nickuc.openlogin.common.database.Database;
+import com.nickuc.openlogin.common.database.MySQL;
 import com.nickuc.openlogin.common.database.PluginSettings;
 import com.nickuc.openlogin.common.database.SQLite;
 import com.nickuc.openlogin.common.http.HttpClient;
@@ -85,7 +86,7 @@ public class OpenLoginBukkit extends JavaPlugin {
 
         Server server = getServer();
 
-        boolean freshInstall = !new File(getDataFolder(), "accounts.db").exists() && !new File(getDataFolder(), "config.yml").exists();
+        boolean freshInstall = !new File(getDataFolder(), "config.yml").exists();
 
         // setup config
         if (!setupSettings()) {
@@ -128,6 +129,16 @@ public class OpenLoginBukkit extends JavaPlugin {
         foliaLib.runAsync(task -> this.detectUpdates());
     }
 
+    public void onDisable() {
+        if (database != null) {
+            try {
+                database.closeConnection();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
     public void sendMessage(String message) {
         getServer().getConsoleSender().sendMessage("[" + getName() + "] " + message);
     }
@@ -137,8 +148,20 @@ public class OpenLoginBukkit extends JavaPlugin {
     }
 
     private boolean setupDatabase() {
-        File databaseFile = new File(getDataFolder(), "accounts.db");
-        database = new SQLite(databaseFile);
+        if ("MYSQL".equalsIgnoreCase(Settings.STORAGE_TYPE.asString())) {
+            database = new MySQL(
+                    Settings.MYSQL_HOST.asString(),
+                    Settings.MYSQL_PORT.asInt(),
+                    Settings.MYSQL_DATABASE.asString(),
+                    Settings.MYSQL_USERNAME.asString(),
+                    Settings.MYSQL_PASSWORD.asString(),
+                    Settings.MYSQL_USE_SSL.asBoolean(),
+                    Settings.MYSQL_POOL_SIZE.asInt()
+            );
+        } else {
+            File databaseFile = new File(getDataFolder(), "accounts.db");
+            database = new SQLite(databaseFile);
+        }
         try {
             database.openConnection();
             database.update("CREATE TABLE IF NOT EXISTS `openlogin` (`name` TEXT, `realname` TEXT, `password` TEXT, `address` TEXT, `lastlogin` INTEGER, `regdate` INTEGER)");

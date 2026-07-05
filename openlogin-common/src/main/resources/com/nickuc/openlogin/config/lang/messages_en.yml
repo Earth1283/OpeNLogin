@@ -112,6 +112,9 @@ Messages:
     # Message sent when a database operation has not been successfully performed
     database-error: "&cSorry, we were unable to complete this operation. Please try again. [SQL FAIL]"
 
+    # Message sent when a player tries to register too many accounts from the same IP address
+    too-many-accounts: "&cToo many accounts have already been registered from your IP address."
+
   other-messages:
     # Message sent to use the /login command
     message-login: "&eUse the command /login <password>"

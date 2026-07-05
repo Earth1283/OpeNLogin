@@ -68,10 +68,25 @@ public interface Database {
     // Query class
     class Query implements Closeable {
 
+        private final Connection connection;
+        private final boolean closeConnection;
         private final PreparedStatement preparedStatement;
         public final ResultSet resultSet;
 
         public Query(Connection connection, String command, Object... args) throws SQLException {
+            this(connection, false, command, args);
+        }
+
+        /**
+         * @param connection      the connection to use
+         * @param closeConnection whether the connection should be closed together with this query
+         *                        (used by pooled backends where each query checks out its own connection)
+         * @param command         the command to be executed
+         * @param args            the command arguments
+         */
+        public Query(Connection connection, boolean closeConnection, String command, Object... args) throws SQLException {
+            this.connection = connection;
+            this.closeConnection = closeConnection;
             try {
                 preparedStatement = connection.prepareStatement(command);
                 for (int i = 0; i < args.length; i++) {
@@ -97,6 +112,12 @@ public interface Database {
                     preparedStatement.close();
                 }
             } catch (SQLException ignored) {
+            }
+            if (closeConnection) {
+                try {
+                    connection.close();
+                } catch (SQLException ignored) {
+                }
             }
         }
 

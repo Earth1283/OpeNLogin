@@ -127,6 +127,24 @@ public class AccountManagement {
     }
 
     /**
+     * Counts how many accounts are registered from the given address.
+     *
+     * @param address the address to check
+     * @return the number of accounts registered from that address
+     */
+    public int countByAddress(@NonNull String address) {
+        try (Database.Query query = database.query("SELECT COUNT(*) AS total FROM `openlogin` WHERE `address` = ?", address)) {
+            ResultSet resultSet = query.resultSet;
+            if (resultSet.next()) {
+                return resultSet.getInt("total");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return 0;
+    }
+
+    /**
      * Update the player's database column.
      *
      * @param name           the name of the player (realname)

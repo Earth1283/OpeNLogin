@@ -68,6 +68,7 @@ public enum Messages {
     PLAYER_COMMAND_USAGE("error-messages.player-command-usage"),
     PLUGIN_RELOAD_MESSAGE("error-messages.plugin-reload-message"),
     DATABASE_ERROR("error-messages.database-error"),
+    TOO_MANY_ACCOUNTS("error-messages.too-many-accounts"),
 
     // other messages
     MESSAGE_LOGIN("other-messages.message-login"),
