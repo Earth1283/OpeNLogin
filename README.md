@@ -2,6 +2,14 @@
 
 A practical, secure and friendly authentication plugin
 
+### Features
+
+SQLite or MySQL/MariaDB storage, remember-me sessions, brute-force
+protection, and in-game admin tooling (force-login, force-unregister,
+force-changepassword). See [docs/features.md](docs/features.md) for
+configuration and usage, and [docs/lang.md](docs/lang.md) for the available
+translations.
+
 ### For development:
 
 #### Gradle:
@@ -35,7 +43,3 @@ dependencies {
   </dependency>
 </dependencies>
 ```
-
-### Usage:
-![graph](https://bstats.org/signatures/bukkit/OpeNLogin.svg)
-Powered by <a href="https://bstats.org/">bStats</a>
