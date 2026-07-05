@@ -25,16 +25,26 @@
 package com.nickuc.openlogin.bukkit.command.executors;
 
 import com.nickuc.openlogin.bukkit.OpenLoginBukkit;
+import com.nickuc.openlogin.bukkit.api.events.AsyncAuthenticateEvent;
 import com.nickuc.openlogin.bukkit.command.BukkitAbstractCommand;
+import com.nickuc.openlogin.bukkit.task.LoginQueue;
 import com.nickuc.openlogin.bukkit.ui.chat.ActionbarAPI;
+import com.nickuc.openlogin.bukkit.ui.title.TitleAPI;
 import com.nickuc.openlogin.common.http.HttpClient;
+import com.nickuc.openlogin.common.manager.AccountManagement;
+import com.nickuc.openlogin.common.manager.LoginManagement;
+import com.nickuc.openlogin.common.model.Account;
+import com.nickuc.openlogin.common.security.hashing.BCrypt;
 import com.nickuc.openlogin.common.settings.Messages;
+import com.nickuc.openlogin.common.settings.Settings;
 import com.nickuc.openlogin.common.util.FileUtils;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Optional;
+import java.util.StringJoiner;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -89,6 +99,15 @@ public class OpenLoginCommand extends BukkitAbstractCommand {
                     }
                     return;
                 }
+
+                case "admin": {
+                    if (!sender.hasPermission("openlogin.admin")) {
+                        sender.sendMessage(Messages.INSUFFICIENT_PERMISSIONS.asString());
+                        return;
+                    }
+                    performAdmin(sender, lb, args);
+                    return;
+                }
             }
         }
 
@@ -97,6 +116,157 @@ public class OpenLoginCommand extends BukkitAbstractCommand {
         sender.sendMessage("");
         sender.sendMessage(" §7GitHub: §fhttps://github.com/" + REPOSITORY);
         sender.sendMessage("");
+    }
+
+    private void performAdmin(CommandSender sender, String lb, String[] args) {
+        if (args.length < 2) {
+            sendAdminUsage(sender, lb);
+            return;
+        }
+
+        switch (args[1].toLowerCase()) {
+            case "sessions": {
+                sendSessions(sender);
+                return;
+            }
+
+            case "forcelogin": {
+                if (args.length != 3) {
+                    sender.sendMessage("§cUsage: /" + lb + " admin forcelogin <player>");
+                    return;
+                }
+                forceLogin(sender, args[2]);
+                return;
+            }
+
+            case "unregister": {
+                if (args.length != 3) {
+                    sender.sendMessage("§cUsage: /" + lb + " admin unregister <player>");
+                    return;
+                }
+                forceUnregister(sender, args[2]);
+                return;
+            }
+
+            case "changepassword": {
+                if (args.length != 4) {
+                    sender.sendMessage("§cUsage: /" + lb + " admin changepassword <player> <newpassword>");
+                    return;
+                }
+                forceChangePassword(sender, args[2], args[3]);
+                return;
+            }
+
+            default: {
+                sendAdminUsage(sender, lb);
+            }
+        }
+    }
+
+    private void sendAdminUsage(CommandSender sender, String lb) {
+        sender.sendMessage("§cUsage: /" + lb + " admin <forcelogin|unregister|changepassword|sessions> [player] [args]");
+    }
+
+    private void sendSessions(CommandSender sender) {
+        LoginManagement loginManagement = plugin.getLoginManagement();
+        StringJoiner pending = new StringJoiner("§7, §f");
+        int count = 0;
+        for (Player online : plugin.getServer().getOnlinePlayers()) {
+            if (!loginManagement.isAuthenticated(online.getName())) {
+                pending.add(online.getName());
+                count++;
+            }
+        }
+
+        if (count == 0) {
+            sender.sendMessage("§aAll online players are authenticated.");
+        } else {
+            sender.sendMessage("§eUnauthenticated players (" + count + "): §f" + pending);
+        }
+    }
+
+    private void forceLogin(CommandSender sender, String playerName) {
+        Player target = plugin.getServer().getPlayerExact(playerName);
+        if (target == null) {
+            sender.sendMessage("§cThat player is not online.");
+            return;
+        }
+
+        LoginManagement loginManagement = plugin.getLoginManagement();
+        String name = target.getName();
+        if (loginManagement.isAuthenticated(name)) {
+            sender.sendMessage("§c" + name + " is already logged in.");
+            return;
+        }
+
+        loginManagement.setAuthenticated(name);
+        loginManagement.resetFailedAttempts(name);
+        LoginQueue.removeFromQueue(name);
+
+        plugin.getFoliaLib().runAtEntity(target, task -> {
+            target.setWalkSpeed(0.2F);
+            target.setFlySpeed(0.1F);
+            target.sendMessage(Messages.SUCCESSFUL_LOGIN.asString());
+            TitleAPI.getApi().send(target, Messages.TITLE_AFTER_LOGIN.asTitle());
+        });
+        new AsyncAuthenticateEvent(target).callEvt();
+
+        sender.sendMessage("§aForced " + name + " to log in.");
+    }
+
+    private void forceUnregister(CommandSender sender, String playerName) {
+        AccountManagement accountManagement = plugin.getAccountManagement();
+        Optional<Account> accountOpt = accountManagement.retrieveOrLoad(playerName);
+        if (!accountOpt.isPresent()) {
+            sender.sendMessage(Messages.NOT_REGISTERED.asString());
+            return;
+        }
+
+        if (!accountManagement.delete(playerName)) {
+            sender.sendMessage(Messages.DATABASE_ERROR.asString());
+            return;
+        }
+
+        Player target = plugin.getServer().getPlayerExact(playerName);
+        if (target != null) {
+            plugin.getLoginManagement().cleanup(target.getName());
+            plugin.getFoliaLib().runAtEntity(target, task -> target.kickPlayer(Messages.UNREGISTER_KICK.asString()));
+        }
+
+        sender.sendMessage("§aUnregistered " + playerName + ".");
+    }
+
+    private void forceChangePassword(CommandSender sender, String playerName, String newPassword) {
+        int passwordLength = newPassword.length();
+        if (passwordLength <= Settings.PASSWORD_SMALL.asInt()) {
+            sender.sendMessage(Messages.PASSWORD_TOO_SMALL.asString());
+            return;
+        }
+        if (passwordLength >= Settings.PASSWORD_LARGE.asInt()) {
+            sender.sendMessage(Messages.PASSWORD_TOO_LARGE.asString());
+            return;
+        }
+
+        AccountManagement accountManagement = plugin.getAccountManagement();
+        Optional<Account> accountOpt = accountManagement.retrieveOrLoad(playerName);
+        if (!accountOpt.isPresent()) {
+            sender.sendMessage(Messages.NOT_REGISTERED.asString());
+            return;
+        }
+
+        Player target = plugin.getServer().getPlayerExact(playerName);
+        String address = target != null ? target.getAddress().getAddress().getHostAddress() : accountOpt.get().getAddress();
+
+        String hashedPassword = BCrypt.hashpw(newPassword, BCrypt.gensalt());
+        if (!accountManagement.update(playerName, hashedPassword, address)) {
+            sender.sendMessage(Messages.DATABASE_ERROR.asString());
+            return;
+        }
+
+        sender.sendMessage(Messages.PASSWORD_CHANGED.asString());
+        if (target != null) {
+            target.sendMessage(Messages.PASSWORD_CHANGED.asString());
+        }
     }
 
     private boolean update(Player player) {
