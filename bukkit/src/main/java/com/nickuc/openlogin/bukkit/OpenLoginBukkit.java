@@ -194,7 +194,7 @@ public class OpenLoginBukkit extends JavaPlugin {
         pm.registerEvents(new PlayerGeneralListeners(this), this);
         pm.registerEvents(new PlayerJoinListeners(this), this);
         pm.registerEvents(new PlayerKickListeners(this), this);
-        pm.registerEvents(new PlayerAuthenticateListener(this), this);
+        pm.registerEvents(new PlayerAuthenticateListener(this, newUser), this);
     }
 
     private void setupMetrics() {
