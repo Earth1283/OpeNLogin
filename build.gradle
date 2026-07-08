@@ -1,4 +1,5 @@
 subprojects {
+    apply plugin: 'idea'
     apply plugin: 'java'
 
     group = 'com.nickuc.openlogin'
