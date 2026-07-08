@@ -112,7 +112,7 @@ public enum Messages {
 
     public Title asTitle() {
         Object obj = Settings.SETTINGS.get(key);
-        return (Title) (!(obj instanceof Title) ? Title.EMPTY : obj);
+        return (Title) (!(obj instanceof Title) ? Title.empty() : obj);
     }
 
 }

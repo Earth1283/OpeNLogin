@@ -33,8 +33,11 @@ public interface TitleAPI {
         return TitleAPIHolder.getApi();
     }
 
-    void send(Player player, Title title);
+    void send(Player player, String title, String subtitle, int fadeIn, int stay, int fadeOut);
+
+    default void send(Player player, Title title) {
+        send(player, title.title, title.subtitle, title.fadeIn,  title.stay, title.fadeOut);
+    }
 
     void reset(Player player);
-
 }

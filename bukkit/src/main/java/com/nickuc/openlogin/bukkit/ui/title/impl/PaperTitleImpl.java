@@ -27,13 +27,18 @@ package com.nickuc.openlogin.bukkit.ui.title.impl;
 import com.nickuc.openlogin.bukkit.ui.title.TitleAPI;
 import org.bukkit.entity.Player;
 
-import java.util.Objects;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 
-public class SpigotTitleImpl implements TitleAPI {
+public class PaperTitleImpl implements TitleAPI {
 
-    public SpigotTitleImpl() throws ReflectiveOperationException {
-        Objects.requireNonNull(Player.class.getMethod("sendTitle", String.class, String.class, int.class, int.class, int.class));
-        Objects.requireNonNull(Player.class.getMethod("resetTitle"));
+    private final Constructor<?> titleConstructor;
+    private final Method sendTitle;
+
+    public PaperTitleImpl() throws ReflectiveOperationException {
+        Class<?> titleClass = Class.forName("org.github.paperspigot.Title");
+        titleConstructor = titleClass.getConstructor(String.class, String.class, int.class, int.class, int.class);
+        sendTitle = Player.class.getMethod("sendTitle", titleClass);
     }
 
     @Override
@@ -46,7 +51,12 @@ public class SpigotTitleImpl implements TitleAPI {
         if (title.isEmpty()) title = "§r";
         if (subtitle.isEmpty()) subtitle = "§r";
 
-        player.sendTitle(title, subtitle, fadeIn, stay, fadeOut);
+        try {
+            Object paperTitle = titleConstructor.newInstance(title, subtitle, fadeIn, stay, fadeOut);
+            sendTitle.invoke(player, paperTitle);
+        } catch (ReflectiveOperationException e) {
+            throw new RuntimeException("Cannot send title for " + player.getName() + "!", e);
+        }
     }
 
     @Override

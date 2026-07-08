@@ -24,9 +24,8 @@
 
 package com.nickuc.openlogin.bukkit.ui.title;
 
-import com.nickuc.openlogin.bukkit.ui.title.impl.PacketTitleImpl;
+import com.nickuc.openlogin.bukkit.ui.title.impl.PaperTitleImpl;
 import com.nickuc.openlogin.bukkit.ui.title.impl.SpigotTitleImpl;
-import com.nickuc.openlogin.common.model.Title;
 import org.bukkit.entity.Player;
 
 public class TitleAPIHolder {
@@ -36,20 +35,28 @@ public class TitleAPIHolder {
     static {
         try {
             api = new SpigotTitleImpl();
-        } catch (Throwable ignored) {
-            try {
-                api = new PacketTitleImpl();
-            } catch (Throwable ignored2) {
-                api = new TitleAPI() {
-                    @Override
-                    public void send(Player player, Title title) {
-                    }
+        } catch (ReflectiveOperationException ignored) {
+            // Spigot Title API is not available, fall back to the Paper implementation
+        }
 
-                    @Override
-                    public void reset(Player player) {
-                    }
-                };
-            }
+        try {
+            if (api == null) api = new PaperTitleImpl();
+        } catch (ReflectiveOperationException ignored) {
+            // Paper Title API is not available, fall back to the default no-op implementation
+        }
+
+        if (api == null) {
+            api = new TitleAPI() {
+                @Override
+                public void send(Player player, String title, String subtitle, int fadeIn, int stay, int fadeOut) {
+                    // Default no-op implementation
+                }
+
+                @Override
+                public void reset(Player player) {
+                    // Default no-op implementation
+                }
+            };
         }
     }
 

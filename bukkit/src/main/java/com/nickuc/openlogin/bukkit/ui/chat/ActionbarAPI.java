@@ -37,5 +37,4 @@ public interface ActionbarAPI {
     default void reset(Player player) {
         send(player, "");
     }
-
 }

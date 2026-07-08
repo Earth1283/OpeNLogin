@@ -28,17 +28,20 @@ import com.nickuc.openlogin.common.util.ChatColor;
 
 public class Title {
 
-    public static final Title EMPTY = new Title("", "", 0, 0, 0);
+    private static final Title empty = new Title("", "", 0, 0, 0);
 
     public final String title, subtitle;
-    public final int start, duration, end;
+    public final int fadeIn, stay, fadeOut;
 
-    public Title(String title, String subtitle, int start, int duration, int end) {
+    public Title(String title, String subtitle, int fadeIn, int stay, int fadeOut) {
         this.title = ChatColor.translateAlternateColorCodes('&', title);
         this.subtitle = ChatColor.translateAlternateColorCodes('&', subtitle);
-        this.start = start;
-        this.duration = duration;
-        this.end = end;
+        this.fadeIn = fadeIn;
+        this.stay = stay;
+        this.fadeOut = fadeOut;
     }
 
+    public static Title empty() {
+        return empty;
+    }
 }
